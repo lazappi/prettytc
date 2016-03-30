@@ -5,8 +5,10 @@ Pretty print TeXcount output
 
 
 import argparse
+import os
 import shlex
 import subprocess
+import time
 
 class Colours(object):
     """
@@ -275,6 +277,26 @@ def printHeader(args):
     print sep
     print
 
+
+def logTotals(tree):
+
+    cur_date = time.strftime("%Y-%m-%d")
+    cur_time = time.strftime("%H:%M")
+    text = tree.totals["text"]
+    headers = tree.totals["headers"]
+    captions = tree.totals["captions"]
+    total = text + headers + captions
+
+    if not os.path.isfile("wordcount.log"):
+        with open("wordcount.log", "w") as logfile:
+            logfile.write("Date\tTime\tText\tHeaders\tCaptions\tTotal\n")
+    
+    log_line = "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n".format(cur_date, cur_time, text,
+                                                       headers, captions, total)
+
+    with open("wordcount.log", "a") as logfile:
+        logfile.write(log_line)
+
 def getArgs():
     """
     Get arguments from the command line using argparse
@@ -295,6 +317,7 @@ def getArgs():
 
     return args, tc_opts
 
+
 if __name__ == "__main__":
 
     args, tc_opts = getArgs()
@@ -306,6 +329,8 @@ if __name__ == "__main__":
     tc_data = parseTeXcount(tc_output)
 
     tc_tree = buildTree(tc_data)[0]
+
+    logTotals(tc_tree)
 
     printHeader(args)
 
