@@ -278,7 +278,7 @@ def printHeader(args):
     print
 
 
-def logTotals(tree):
+def logTotals(tree, logpath):
 
     cur_date = time.strftime("%Y-%m-%d")
     cur_time = time.strftime("%H:%M")
@@ -287,15 +287,16 @@ def logTotals(tree):
     captions = tree.totals["captions"]
     total = text + headers + captions
 
-    if not os.path.isfile("wordcount.log"):
-        with open("wordcount.log", "w") as logfile:
+    if not os.path.isfile(logpath):
+        with open(logpath, "w") as logfile:
             logfile.write("Date\tTime\tText\tHeaders\tCaptions\tTotal\n")
     
     log_line = "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n".format(cur_date, cur_time, text,
                                                        headers, captions, total)
 
-    with open("wordcount.log", "a") as logfile:
+    with open(logpath, "a") as logfile:
         logfile.write(log_line)
+
 
 def getArgs():
     """
@@ -312,6 +313,8 @@ def getArgs():
                         help="number of spaces to indent levels")
     parser.add_argument("-c", "--colour", action="store_true",
                         help="whether to colour output")
+    parser.add_argument("-l", "--logpath", type=str,
+                        help="file to log counts to")
     args, unknown = parser.parse_known_args()
     tc_opts = " ".join(unknown)
 
@@ -330,8 +333,9 @@ if __name__ == "__main__":
 
     tc_tree = buildTree(tc_data)[0]
 
-    logTotals(tc_tree)
-
     printHeader(args)
 
     printTree(tc_tree, args)
+
+    if args.logpath:
+        logTotals(tc_tree, args.logpath)
