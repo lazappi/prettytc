@@ -282,21 +282,29 @@ def logTotals(tree, logpath):
 
     cur_date = time.strftime("%Y-%m-%d")
     cur_time = time.strftime("%H:%M")
+    name = tree.name
+    level = tree.level
     text = tree.totals["text"]
     headers = tree.totals["headers"]
     captions = tree.totals["captions"]
     total = text + headers + captions
 
     if not os.path.isfile(logpath):
+        head_line = ["Date", "Time", "Name", "Level", "Text", "Headers",
+                     "Captions", "Total"]
+        head_line = "\t".join(head_line) + "\n"
         with open(logpath, "w") as logfile:
-            logfile.write("Date\tTime\tText\tHeaders\tCaptions\tTotal\n")
-    
-    log_line = "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n".format(cur_date, cur_time, text,
-                                                       headers, captions, total)
+            logfile.write(head_line)
+
+    log_line = [cur_date, cur_time, name, level, str(text), str(headers),
+                str(captions), str(total)]
+    log_line = "\t".join(log_line) + "\n"
 
     with open(logpath, "a") as logfile:
         logfile.write(log_line)
 
+    for sub_tree in tree.children:
+        logTotals(sub_tree, logpath)
 
 def getArgs():
     """
