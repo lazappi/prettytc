@@ -1,15 +1,23 @@
 #! /usr/bin/python
+"""
+Pretty print TeXcount output
+"""
+
 
 import argparse
+import os
 import shlex
 import subprocess
+import time
 
-class colours():
-    # ANSI code from https://wiki.archlinux.org/index.php/Color_Bash_Prompt
-    # Change "\e" to "\x1b"
+class Colours(object):
+    """
+    ANSI code from https://wiki.archlinux.org/index.php/Color_Bash_Prompt
+    Change '\e' to '\x1b'
+    """
 
     # Reset
-    Reset ='\x1b[0m'       # Text Reset
+    Reset = '\x1b[0m'       # Text Reset
 
     # Regular Colors
     Black = '\x1b[0;30m'        # Black
@@ -81,7 +89,11 @@ class colours():
     On_ICyan = '\x1b[0;106m'    # Cyan
     On_IWhite = '\x1b[0;107m'   # White
 
+
 class Tree(object):
+    """
+    Tree object for storing TeXcount output
+    """
 
     def __init__(self, level, name):
         self.counts = {"text" : 0,
@@ -95,19 +107,32 @@ class Tree(object):
         self.children = []
 
     def set_counts(self, counts):
+        """
+        Set counts for this level of the tree
+        """
         self.counts["text"] = counts["text"]
         self.counts["headers"] = counts["headers"]
         self.counts["captions"] = counts["captions"]
 
     def update_totals(self, counts):
+        """
+        Update totals at this level
+        """
         self.totals["text"] += counts["text"]
         self.totals["headers"] += counts["headers"]
         self.totals["captions"] += counts["captions"]
 
     def add_child(self, node):
+        """
+        Add subtree
+        """
         self.children.append(node)
 
+
 def level_cmp(level1, level2):
+    """
+    Comparison function for TeXcount levels
+    """
 
     levels = ["Subsubsection", "Subsection", "Section", "Chapter", "Part",
               "Document"]
@@ -116,11 +141,19 @@ def level_cmp(level1, level2):
 
     return cmp(level1, level2)
 
+
 def level_lt(level1, level2):
+    """
+    Convenience function for LT level comparisons
+    """
 
     return level_cmp(level1, level2) == -1
 
+
 def parseTeXcount(tc_output):
+    """
+    Read TeXcount output into a list
+    """
 
     tc_data = []
 
@@ -146,7 +179,11 @@ def parseTeXcount(tc_output):
 
     return tc_data
 
+
 def buildTree(data):
+    """
+    Convet TeXcount output list to a tree
+    """
 
     if not data:
         return (None, None)
@@ -168,7 +205,11 @@ def buildTree(data):
 
     return tree, data
 
-def printTree(tree, args, level = 0):
+
+def printTree(tree, args, level=0):
+    """
+    Print TeXcount output tree
+    """
 
     indent = " " * args.indent * level
     level_str = tree.level
@@ -185,21 +226,21 @@ def printTree(tree, args, level = 0):
 
     if args.colour:
 
-        level_cols = {"Subsubsection" : colours.Cyan,
-                      "Subsection" : colours.ICyan,
-                      "Section" : colours.IBlue,
-                      "Chapter" : colours.IGreen,
-                      "Part" : colours.Yellow,
-                      "Document" : colours.IPurple}
+        level_cols = {"Subsubsection" : Colours.Cyan,
+                      "Subsection" : Colours.ICyan,
+                      "Section" : Colours.IBlue,
+                      "Chapter" : Colours.IGreen,
+                      "Part" : Colours.Yellow,
+                      "Document" : Colours.IPurple}
 
-        level_str = level_cols[tree.level] + level_str + colours.Reset
-        counts_str = colours.IYellow + counts_str + colours.Reset
-        totals_str = colours.BRed + totals_str + colours.Reset
+        level_str = level_cols[tree.level] + level_str + Colours.Reset
+        counts_str = Colours.IYellow + counts_str + Colours.Reset
+        totals_str = Colours.BRed + totals_str + Colours.Reset
 
     if add_totals:
-        out_str =  "{0}{1} {2}\t{3}\t{4}".format(indent, level_str,
-                                                 name_str, counts_str,
-                                                 totals_str)
+        out_str = "{0}{1} {2}\t{3}\t{4}".format(indent, level_str,
+                                                name_str, counts_str,
+                                                totals_str)
     else:
 
         out_str = "{0}{1} {2}\t{3}".format(indent, level_str, name_str,
@@ -212,6 +253,9 @@ def printTree(tree, args, level = 0):
 
 
 def printHeader(args):
+    """
+    Print header explaining columns
+    """
 
     level = "Level"
     title = "Title"
@@ -220,10 +264,10 @@ def printHeader(args):
     sep = "-" * 65
 
     if args.colour:
-        level = colours.IPurple + level + colours.Reset
-        count = colours.IYellow + count + colours.Reset
-        total = colours.BRed + total + colours.Reset
-        sep = colours.White + sep + colours.Reset
+        level = Colours.IPurple + level + Colours.Reset
+        count = Colours.IYellow + count + Colours.Reset
+        total = Colours.BRed + total + Colours.Reset
+        sep = Colours.White + sep + Colours.Reset
 
     header = "{0} {1} {2}\t{3}".format(level, title, count, total)
 
@@ -233,24 +277,65 @@ def printHeader(args):
     print sep
     print
 
-def getArgs():
 
-    parser = argparse.ArgumentParser(prog = "prettytc",
-                                   description = "Pretty print TeXcount output",
-        epilog = "Any additional, unkown, arguments will be passed to TeXcount")
-    parser.add_argument("target", help = ".tex file to count")
-    parser.add_argument("-i", "--indent", default = 4, type = int,
-                        help = "number of spaces to indent levels")
-    parser.add_argument("-c", "--colour", action = "store_true",
-                        help = "whether to colour output")
-    args, unknown  = parser.parse_known_args()
+def logTree(tree, logpath):
+    """
+    Log counts to file
+    """
+
+    cur_date = time.strftime("%Y-%m-%d")
+    cur_time = time.strftime("%H:%M:%S")
+    name = tree.name
+    level = tree.level
+    text = tree.totals["text"]
+    headers = tree.totals["headers"]
+    captions = tree.totals["captions"]
+    total = text + headers + captions
+
+    if not os.path.isfile(logpath):
+        head_line = ["Date", "Time", "Name", "Level", "Text", "Headers",
+                     "Captions", "Total"]
+        head_line = "\t".join(head_line) + "\n"
+        with open(logpath, "w") as logfile:
+            logfile.write(head_line)
+
+    log_line = [cur_date, cur_time, name, level, str(text), str(headers),
+                str(captions), str(total)]
+    log_line = "\t".join(log_line) + "\n"
+
+    with open(logpath, "a") as logfile:
+        logfile.write(log_line)
+
+    for sub_tree in tree.children:
+        logTree(sub_tree, logpath)
+
+
+def getArgs():
+    """
+    Get arguments from the command line using argparse
+    """
+
+    parser = argparse.ArgumentParser(prog="prettytc",
+                                     description="Pretty print TeXcount output",
+                                     epilog="""Any additional, unkown,
+                                               arguments will be passed to
+                                               TeXcount""")
+    parser.add_argument("target", help=".tex file to count")
+    parser.add_argument("-i", "--indent", default=4, type=int,
+                        help="number of spaces to indent levels")
+    parser.add_argument("-c", "--colour", action="store_true",
+                        help="whether to colour output")
+    parser.add_argument("-l", "--logpath", type=str,
+                        help="file to log counts to")
+    args, unknown = parser.parse_known_args()
     tc_opts = " ".join(unknown)
 
     return args, tc_opts
 
+
 if __name__ == "__main__":
 
-    args, tc_opts  = getArgs()
+    args, tc_opts = getArgs()
 
     cmd = shlex.split("texcount " + tc_opts + " " + args.target)
 
@@ -263,3 +348,6 @@ if __name__ == "__main__":
     printHeader(args)
 
     printTree(tc_tree, args)
+
+    if args.logpath:
+        logTree(tc_tree, args.logpath)
