@@ -278,10 +278,13 @@ def printHeader(args):
     print
 
 
-def logTotals(tree, logpath):
+def logTree(tree, logpath):
+    """
+    Log counts to file
+    """
 
     cur_date = time.strftime("%Y-%m-%d")
-    cur_time = time.strftime("%H:%M")
+    cur_time = time.strftime("%H:%M:%S")
     name = tree.name
     level = tree.level
     text = tree.totals["text"]
@@ -304,7 +307,8 @@ def logTotals(tree, logpath):
         logfile.write(log_line)
 
     for sub_tree in tree.children:
-        logTotals(sub_tree, logpath)
+        logTree(sub_tree, logpath)
+
 
 def getArgs():
     """
@@ -346,4 +350,4 @@ if __name__ == "__main__":
     printTree(tc_tree, args)
 
     if args.logpath:
-        logTotals(tc_tree, args.logpath)
+        logTree(tc_tree, args.logpath)
